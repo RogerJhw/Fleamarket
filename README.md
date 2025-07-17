@@ -110,3 +110,17 @@ python -m py_compile algorand/*.py
 
 These utilities interact with the Algorand TestNet. Ensure the environment
 variables are set correctly before running the examples.
+
+## Streamlit demo
+
+The repository now includes a basic Streamlit application that simulates a
+simple auction based "Fleamarket".  It does **not** interact with the Algorand
+blockchain but provides a user interface for listing items, running an auction
+and exchanging messages between the buyer and seller.  To launch the demo run:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+Images and auction data are stored only in the running session and are lost when
+the application stops.
