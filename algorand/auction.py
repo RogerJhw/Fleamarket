@@ -1,5 +1,12 @@
-from algosdk.future import transaction
-from pyteal import *
+try:
+    from algosdk.future import transaction
+except Exception:  # pragma: no cover - optional dependency
+    transaction = None
+
+try:
+    from pyteal import *  # type: ignore
+except Exception:  # pragma: no cover - optional dependency
+    pass
 
 from .contracts import deploy_app
 
