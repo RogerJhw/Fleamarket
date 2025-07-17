@@ -1,5 +1,9 @@
-from algosdk import account
-from algosdk.future import transaction
+try:
+    from algosdk import account
+    from algosdk.future import transaction
+except Exception:  # pragma: no cover - optional dependency
+    account = None
+    transaction = None
 
 from .client import get_algod_client
 

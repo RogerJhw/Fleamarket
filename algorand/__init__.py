@@ -1,14 +1,36 @@
 """Utilities for working with the Algorand TestNet."""
 
-from .client import get_algod_client
-from .transactions import send_payment
-from .asset import create_asset
-from .contracts import deploy_app, compile_teal
-from .auction import (
-    approval_program as auction_approval_program,
-    clear_program as auction_clear_program,
-    deploy_auction_app,
-)
+try:
+    from .client import get_algod_client
+except Exception:  # pragma: no cover - optional dependency
+    get_algod_client = None
+
+try:
+    from .transactions import send_payment
+except Exception:  # pragma: no cover - optional dependency
+    send_payment = None
+
+try:
+    from .asset import create_asset
+except Exception:  # pragma: no cover - optional dependency
+    create_asset = None
+
+try:
+    from .contracts import deploy_app, compile_teal
+except Exception:  # pragma: no cover - optional dependency
+    deploy_app = None
+    compile_teal = None
+
+try:
+    from .auction import (
+        approval_program as auction_approval_program,
+        clear_program as auction_clear_program,
+        deploy_auction_app,
+    )
+except Exception:  # pragma: no cover - optional dependency
+    auction_approval_program = None
+    auction_clear_program = None
+    deploy_auction_app = None
 
 __all__ = [
     "get_algod_client",

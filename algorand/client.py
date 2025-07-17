@@ -1,5 +1,9 @@
 import os
-from algosdk.v2client import algod
+
+try:
+    from algosdk.v2client import algod
+except Exception:  # pragma: no cover - optional dependency
+    algod = None
 
 
 def get_algod_client() -> algod.AlgodClient:
