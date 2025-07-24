@@ -5,3 +5,4 @@ qrcode==7.4.2
 
 streamlit-javascript
 pywalletconnect
+filetype==1.2.0
