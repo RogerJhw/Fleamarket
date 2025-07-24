@@ -1,5 +1,6 @@
 import base64
-import imghdr
+import filetype
+from PIL import Image
 import io
 import json
 import os
@@ -177,12 +178,19 @@ with st.form("list_form"):
             st.error("Upload a valid image")
         else:
             img_data = uploaded.read()
-            if imghdr.what(None, img_data) not in {"png", "jpeg"}:
+            kind = filetype.guess(img_data)
+            if kind is None or not kind.mime.startswith("image/"):
                 st.error("Invalid image format")
             else:
-                asset_id = mint_asa(name, desc, int(price * 1_000_000), img_data)
-                if asset_id:
-                    st.success(f"Listing created with ASA ID {asset_id}")
+                try:
+                    img = Image.open(io.BytesIO(img_data))
+                    img.verify()
+                except Exception:
+                    st.error("Invalid image file")
+                else:
+                    asset_id = mint_asa(name, desc, int(price * 1_000_000), img_data)
+                    if asset_id:
+                        st.success(f"Listing created with ASA ID {asset_id}")
 
 st.header("Available Items")
 for item in st.session_state["listings"]:
