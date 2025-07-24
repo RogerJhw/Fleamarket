@@ -2,9 +2,8 @@ import base64
 
 try:
     from algosdk import account, transaction
-except Exception:  # pragma: no cover - optional dependency
-    account = None
-    transaction = None
+except ImportError as e:
+    raise ImportError("Missing py-algorand-sdk. Please install it in requirements.txt") from e
 
 import streamlit as st
 from algorand_client import algod_client
