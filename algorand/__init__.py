@@ -1,9 +1,9 @@
 """Utilities for working with the Algorand TestNet."""
 
 try:
-    from .client import get_algod_client
+    from algorand_client import algod_client
 except Exception:  # pragma: no cover - optional dependency
-    get_algod_client = None
+    algod_client = None
 
 try:
     from .transactions import send_payment
@@ -33,7 +33,7 @@ except Exception:  # pragma: no cover - optional dependency
     deploy_auction_app = None
 
 __all__ = [
-    "get_algod_client",
+    "algod_client",
     "send_payment",
     "create_asset",
     "deploy_app",

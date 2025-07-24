@@ -6,12 +6,16 @@ except Exception:  # pragma: no cover - optional dependency
     account = None
     transaction = None
 
-from .client import get_algod_client
+import streamlit as st
+from algorand_client import algod_client
 
 
 def compile_teal(teal_source: str) -> bytes:
     """Compile TEAL source to bytecode using the Algod client."""
-    client = get_algod_client()
+    if algod_client is None:
+        st.error("Algod client is not configured")
+        return b""
+    client = algod_client
     compile_response = client.compile(teal_source)
     return base64.b64decode(compile_response["result"])
 
@@ -21,7 +25,10 @@ def deploy_app(private_key: str, approval_program: str, clear_program: str,
                local_schema: transaction.StateSchema | None = None,
                app_args: list[bytes] | None = None) -> str:
     """Deploy a PyTeal application and return the transaction ID."""
-    client = get_algod_client()
+    if algod_client is None:
+        st.error("Algod client is not configured")
+        return ""
+    client = algod_client
     sender = account.address_from_private_key(private_key)
     params = client.suggested_params()
     if global_schema is None:
