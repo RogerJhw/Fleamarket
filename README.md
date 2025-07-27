@@ -124,3 +124,12 @@ streamlit run streamlit_app.py
 
 Images and auction data are stored only in the running session and are lost when
 the application stops.
+
+An alternative multi-tab demo is available in `streamlit_multi_app.py`:
+
+```bash
+streamlit run streamlit_multi_app.py
+```
+
+This version organizes the interface into Marketplace, Connect Wallet, List Item
+and Bid tabs using `st.sidebar.radio`.
