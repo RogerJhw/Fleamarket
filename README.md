@@ -133,3 +133,11 @@ streamlit run streamlit_multi_app.py
 
 This version organizes the interface into Marketplace, Connect Wallet, List Item
 and Bid tabs using `st.sidebar.radio`.
+
+## Supabase Integration
+
+The multi-tab app now supports user authentication and persistent item storage
+via [Supabase](https://supabase.com). Create a `.env` file with your Supabase
+credentials (see `.env.example`). On first launch you will be prompted to sign up
+or sign in. Listed items are stored in the `items` table and are shared across
+sessions.
