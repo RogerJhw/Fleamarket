@@ -12,8 +12,10 @@ if "listings" not in st.session_state:
     st.session_state["listings"] = []
 if "selected_item" not in st.session_state:
     st.session_state["selected_item"] = None
-if "tab" not in st.session_state:
-    st.session_state["tab"] = "Marketplace"
+if "page" not in st.session_state:
+    st.session_state["page"] = "Marketplace"
+if "nav" not in st.session_state:
+    st.session_state["nav"] = "Marketplace"
 if "wallet" not in st.session_state:
     st.session_state["wallet"] = None
 
@@ -44,7 +46,8 @@ def render_item_card(idx: int, item: dict):
         st.write(f"Current bid: {item['price']}")
         if st.button("Bid", key=f"bid_{idx}"):
             st.session_state["selected_item"] = idx
-            st.session_state["tab"] = "Bid"
+            st.session_state["page"] = "Bid"
+            st.experimental_rerun()
 
 def marketplace_tab():
     st.header("Marketplace")
@@ -82,7 +85,7 @@ def list_item_tab():
 def bid_tab():
     idx = st.session_state.get("selected_item")
     if idx is None or idx >= len(st.session_state["listings"]):
-        st.info("Select an item from the Marketplace to bid on.")
+        st.warning("No item selected. Please choose one from the Marketplace.")
         return
     item = st.session_state["listings"][idx]
     st.header(item["title"])
@@ -96,20 +99,37 @@ def bid_tab():
         else:
             st.error("Bid must be greater than current bid")
 
-# Sidebar navigation
-selection = st.sidebar.radio(
+# Top navigation
+page_options = ["Marketplace", "Connect Wallet", "List Item"]
+
+prev_page = st.session_state.get("page", "Marketplace")
+prev_nav = st.session_state.get("nav", "Marketplace")
+nav_index = page_options.index(prev_nav) if prev_nav in page_options else 0
+
+nav_selection = st.radio(
     "Navigation",
-    ["Marketplace", "Connect Wallet", "List Item", "Bid"],
-    index=["Marketplace", "Connect Wallet", "List Item", "Bid"].index(st.session_state.get("tab", "Marketplace")),
+    page_options,
+    horizontal=True,
+    index=nav_index,
+    key="nav",
 )
 
-st.session_state["tab"] = selection
+if prev_page == "Bid":
+    if nav_selection != prev_nav:
+        st.session_state["page"] = nav_selection
+        st.experimental_rerun()
+else:
+    if nav_selection != prev_page:
+        st.session_state["page"] = nav_selection
+        st.experimental_rerun()
 
-if selection == "Marketplace":
+page = st.session_state.get("page", "Marketplace")
+
+if page == "Marketplace":
     marketplace_tab()
-elif selection == "Connect Wallet":
+elif page == "Connect Wallet":
     connect_wallet_tab()
-elif selection == "List Item":
+elif page == "List Item":
     list_item_tab()
-elif selection == "Bid":
+elif page == "Bid":
     bid_tab()
