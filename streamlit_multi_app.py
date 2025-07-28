@@ -132,14 +132,14 @@ def list_item_tab():
         image_url = None
         if uploaded:
             file_bytes = uploaded.read()
-            fname = f"{st.session_state['user']['id']}_{int(datetime.utcnow().timestamp())}_{uploaded.name}"
+            fname = f"{st.session_state['user'].id}_{int(datetime.utcnow().timestamp())}_{uploaded.name}"
             try:
                 supabase.storage.from_("images").upload(fname, file_bytes, {"upsert": True})
                 image_url = supabase.storage.from_("images").get_public_url(fname).get("publicUrl")
             except Exception:
                 st.warning("Failed to upload image")
         data = {
-            "user_id": st.session_state["user"]["id"],
+            "user_id": st.session_state["user"].id,
             "title": title,
             "description": description,
             "image_url": image_url,
@@ -176,7 +176,8 @@ def bid_tab():
 # Top navigation
 page_options = ["Marketplace", "Connect Wallet", "List Item"]
 
-st.sidebar.write(f"Logged in as: {st.session_state['user']['email']}")
+if st.session_state.get("user") is not None:
+    st.sidebar.write(f"Logged in as: {st.session_state['user'].email}")
 if st.sidebar.button("Sign Out"):
     supabase.auth.sign_out()
     st.session_state["user"] = None
