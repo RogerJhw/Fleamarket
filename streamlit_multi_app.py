@@ -25,10 +25,6 @@ if "selected_item" not in st.session_state:
     st.session_state["selected_item"] = None
 if "selected_item_id" not in st.session_state:
     st.session_state["selected_item_id"] = None
-if "page" not in st.session_state:
-    st.session_state["page"] = "Marketplace"
-if "nav" not in st.session_state:
-    st.session_state["nav"] = "Marketplace"
 if "wallet" not in st.session_state:
     st.session_state["wallet"] = None
 if "user" not in st.session_state:
@@ -64,7 +60,6 @@ def login_page():
         try:
             res = supabase.auth.sign_in_with_password({"email": email, "password": password})
             st.session_state["user"] = res.user
-            st.session_state["page"] = "Marketplace"
             st.experimental_rerun()
         except Exception as e:
             st.error(f"Sign in failed: {e}")
@@ -72,7 +67,6 @@ def login_page():
         try:
             res = supabase.auth.sign_up({"email": email, "password": password})
             st.session_state["user"] = res.user
-            st.session_state["page"] = "Marketplace"
             st.experimental_rerun()
         except Exception as e:
             st.error(f"Sign up failed: {e}")
@@ -80,6 +74,10 @@ def login_page():
 if st.session_state.get("user") is None:
     login_page()
     st.stop()
+else:
+    user = st.session_state["user"]
+    if getattr(user, "email_confirmed_at", None):
+        st.success("Email verified")
 
 def render_item_card(idx: int, item: dict):
     cols = st.columns([1, 2])
@@ -92,7 +90,7 @@ def render_item_card(idx: int, item: dict):
         st.write(f"Current bid: {item.get('current_bid')}")
         if st.button("View", key=f"bid_{idx}"):
             st.session_state["selected_item_id"] = item["id"]
-            st.session_state["page"] = "Bid"
+            st.experimental_set_query_params(tab="Bid")
             st.experimental_rerun()
 
 def marketplace_tab():
@@ -173,45 +171,31 @@ def bid_tab():
         else:
             st.error("Bid must be greater than current bid")
 
-# Top navigation
-page_options = ["Marketplace", "Connect Wallet", "List Item"]
+# Top navigation using tabs
+tab_labels = ["Marketplace", "Connect Wallet", "List Item", "Bid"]
 
 if st.session_state.get("user") is not None:
     st.sidebar.write(f"Logged in as: {st.session_state['user'].email}")
 if st.sidebar.button("Sign Out"):
     supabase.auth.sign_out()
     st.session_state["user"] = None
-    st.session_state["page"] = "Marketplace"
     st.experimental_rerun()
 
-prev_page = st.session_state.get("page", "Marketplace")
-prev_nav = st.session_state.get("nav", "Marketplace")
-nav_index = page_options.index(prev_nav) if prev_nav in page_options else 0
+query_params = st.experimental_get_query_params()
+active_tab = query_params.get("tab", ["Marketplace"])[0]
+if active_tab not in tab_labels:
+    active_tab = "Marketplace"
 
-nav_selection = st.radio(
-    "Navigation",
-    page_options,
-    horizontal=True,
-    index=nav_index,
-    key="nav",
-)
+tab_marketplace, tab_wallet, tab_list, tab_bid = st.tabs(tab_labels)
 
-if prev_page == "Bid":
-    if nav_selection != prev_nav:
-        st.session_state["page"] = nav_selection
-        st.experimental_rerun()
-else:
-    if nav_selection != prev_page:
-        st.session_state["page"] = nav_selection
-        st.experimental_rerun()
-
-page = st.session_state.get("page", "Marketplace")
-
-if page == "Marketplace":
+with tab_marketplace:
     marketplace_tab()
-elif page == "Connect Wallet":
+
+with tab_wallet:
     connect_wallet_tab()
-elif page == "List Item":
+
+with tab_list:
     list_item_tab()
-elif page == "Bid":
+
+with tab_bid:
     bid_tab()
