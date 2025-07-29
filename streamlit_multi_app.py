@@ -27,38 +27,43 @@ if "selected_item_id" not in st.session_state:
     st.session_state["selected_item_id"] = None
 if "wallet" not in st.session_state:
     st.session_state["wallet"] = None
+if "wallet_address" not in st.session_state:
+    st.session_state["wallet_address"] = None
 if "user" not in st.session_state:
     st.session_state["user"] = None
-if "connecting_wallet" not in st.session_state:
-    st.session_state["connecting_wallet"] = False
 
 
 def connect_wallet() -> str | None:
-    """Connect to Pera wallet via WalletConnect."""
-    if st.session_state.get("wallet"):
-        return st.session_state["wallet"]
+    """Open the Pera Wallet connect modal and return the selected address."""
+    if st.session_state.get("wallet_address"):
+        return st.session_state["wallet_address"]
 
     js = """
-    async function loadPera() {
-        if (typeof window.PeraWalletConnect === 'undefined') {
-            await new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/peraWalletConnect.min.js';
-                script.onload = resolve;
-                script.onerror = reject;
-                document.head.appendChild(script);
-            });
+    async function connectPera() {
+        try {
+            if (typeof window.PeraWalletConnect === 'undefined') {
+                await new Promise((resolve, reject) => {
+                    const script = document.createElement('script');
+                    script.src = 'https://unpkg.com/@perawallet/connect';
+                    script.onload = resolve;
+                    script.onerror = reject;
+                    document.head.appendChild(script);
+                });
+            }
+            const pera = new PeraWalletConnect();
+            const accounts = await pera.connect();
+            return accounts[0] ?? '';
+        } catch (e) {
+            return '';
         }
-        const pera = new PeraWalletConnect();
-        const accounts = await pera.connect();
-        return accounts[0] ?? '';
     }
-    return await loadPera();
+    return await connectPera();
     """
 
-    addr = st_javascript(js, key="connect")
+    addr = st_javascript(js, key="connect_wallet")
     if addr:
-        st.session_state["wallet"] = addr
+        st.session_state["wallet_address"] = addr
+        st.session_state["wallet"] = addr  # backward compatibility
         user = st.session_state.get("user")
         if supabase is not None and user is not None:
             try:
@@ -125,21 +130,14 @@ def marketplace_tab():
 
 def connect_wallet_tab():
     st.header("Connect Wallet")
-    if (
-        st.session_state.get("connecting_wallet")
-        and not st.session_state.get("wallet")
-    ):
+    if st.button("Connect Pera Wallet"):
         addr = connect_wallet()
-        st.session_state["connecting_wallet"] = False
-
-    connected = st.session_state.get("wallet")
-    if connected:
-        st.success(f"Connected address: {connected}")
-        st.button("Connect Pera Wallet", disabled=True)
-    else:
-        if st.button("Connect Pera Wallet"):
-            st.session_state["connecting_wallet"] = True
-            st.experimental_rerun()
+        if addr:
+            st.success(f"Connected address: {addr}")
+        else:
+            st.error("Failed to connect Pera Wallet")
+    elif st.session_state.get("wallet_address"):
+        st.success(f"Connected address: {st.session_state['wallet_address']}" )
 
 def list_item_tab():
     st.header("List an Item")
