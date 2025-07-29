@@ -136,20 +136,32 @@ def connect_wallet_tab():
         """
 <html>
   <head>
-    <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js"></script>
     <script>
       async function connectWallet() {
         try {
-          alert("Script started");
-          console.log("window.PeraWalletConnect is:", window.PeraWalletConnect);
-          if (typeof window.PeraWalletConnect !== "function") {
-            document.body.innerHTML = "<p style='color:red;'>PeraWalletConnect is not a constructor</p>";
+          console.log("window keys:", Object.keys(window));
+          console.log("PeraWalletConnect type:", typeof window.PeraWalletConnect);
+          let ctor = null;
+          if (typeof window.PeraWalletConnect === "function") {
+            ctor = window.PeraWalletConnect;
+          } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.default === "function") {
+            ctor = window.PeraWalletConnect.default;
+          } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.Connect === "function") {
+            ctor = window.PeraWalletConnect.Connect;
+          }
+          if (!ctor) {
+            document.body.innerHTML = "<p style='color:red;'>Unable to load PeraWalletConnect. Please refresh.</p>";
             return;
           }
-          const peraWallet = new window.PeraWalletConnect();
+          const peraWallet = new ctor();
           const accounts = await peraWallet.connect();
-          document.body.innerHTML = "<p style='color:green;'>Connected: " + accounts[0] + "</p>";
-          window.parent.postMessage({ wallet: accounts[0] }, "*");
+          if (accounts && accounts.length > 0) {
+            document.body.innerHTML = "<p style='color:green;'>Connected: " + accounts[0] + "</p>";
+            window.parent.postMessage({ type: 'wallet_connected', address: accounts[0] }, "*");
+          } else {
+            document.body.innerHTML = "<p style='color:red;'>No account selected.</p>";
+          }
         } catch (err) {
           console.error(err);
           document.body.innerHTML = "<p style='color:red;'>Connection failed: " + err + "</p>";

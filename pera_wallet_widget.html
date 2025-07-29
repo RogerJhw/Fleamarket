@@ -2,7 +2,7 @@
 <html>
 <head>
   <title>Pera Wallet Connect Widget</title>
-  <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js"></script>
 </head>
 <body>
   <button id="connect-button">Connect Wallet</button>
@@ -13,26 +13,30 @@
     const output = document.getElementById("wallet-address");
 
     async function connectWallet() {
-      const peraWallet = new window.PeraWalletConnect();
-      peraWallet
-        .connect()
-        .then((accounts) => {
-          const address = accounts[0];
-          output.textContent = `Connected address: ${address}`;
-          window.parent.postMessage({
-            isStreamlitMessage: true,
-            type: "setWallet",
-            address: address,
-          }, "*");
-        })
-        .catch((err) => {
-          output.textContent = `Connection failed: ${err.message}`;
-          window.parent.postMessage({
-            isStreamlitMessage: true,
-            type: "walletError",
-            error: err.message,
-          }, "*");
-        });
+      console.log("window keys:", Object.keys(window));
+      console.log("PeraWalletConnect type:", typeof window.PeraWalletConnect);
+      let ctor = null;
+      if (typeof window.PeraWalletConnect === 'function') {
+        ctor = window.PeraWalletConnect;
+      } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.default === 'function') {
+        ctor = window.PeraWalletConnect.default;
+      } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.Connect === 'function') {
+        ctor = window.PeraWalletConnect.Connect;
+      }
+      if (!ctor) {
+        output.textContent = 'Unable to load PeraWalletConnect.';
+        return;
+      }
+      try {
+        const peraWallet = new ctor();
+        const accounts = await peraWallet.connect();
+        const address = accounts[0];
+        output.textContent = `Connected address: ${address}`;
+        window.parent.postMessage({ type: 'wallet_connected', address: address }, '*');
+      } catch (err) {
+        output.textContent = `Connection failed: ${err.message}`;
+        window.parent.postMessage({ isStreamlitMessage: true, type: 'walletError', error: err.message }, '*');
+      }
     }
 
     button.addEventListener("click", connectWallet);
