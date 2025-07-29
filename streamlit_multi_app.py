@@ -29,6 +29,8 @@ if "wallet" not in st.session_state:
     st.session_state["wallet"] = None
 if "user" not in st.session_state:
     st.session_state["user"] = None
+if "connecting_wallet" not in st.session_state:
+    st.session_state["connecting_wallet"] = False
 
 
 def connect_wallet() -> str | None:
@@ -123,15 +125,21 @@ def marketplace_tab():
 
 def connect_wallet_tab():
     st.header("Connect Wallet")
+    if (
+        st.session_state.get("connecting_wallet")
+        and not st.session_state.get("wallet")
+    ):
+        addr = connect_wallet()
+        st.session_state["connecting_wallet"] = False
+
     connected = st.session_state.get("wallet")
     if connected:
         st.success(f"Connected address: {connected}")
         st.button("Connect Pera Wallet", disabled=True)
     else:
         if st.button("Connect Pera Wallet"):
-            addr = connect_wallet()
-            if addr:
-                st.success(f"Connected address: {addr}")
+            st.session_state["connecting_wallet"] = True
+            st.experimental_rerun()
 
 def list_item_tab():
     st.header("List an Item")
