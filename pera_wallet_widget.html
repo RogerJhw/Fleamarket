@@ -2,36 +2,37 @@
 <html>
 <head>
   <title>Pera Wallet Connect Widget</title>
-  <script src="https://unpkg.com/@perawallet/connect"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect"></script>
 </head>
 <body>
-  <button id="connect-button">Connect Pera Wallet</button>
+  <button id="connect-button">Connect Wallet</button>
   <p id="wallet-address"></p>
 
   <script>
     const button = document.getElementById("connect-button");
     const output = document.getElementById("wallet-address");
-    let peraWallet;
 
     async function connectWallet() {
-      try {
-        peraWallet = new window.PeraWalletConnect();
-
-        const accounts = await peraWallet.connect();
-        const address = accounts[0];
-
-        output.textContent = `Connected address: ${address}`;
-
-        // Send wallet address to Streamlit backend
-        const streamlitMsg = {
-          isStreamlitMessage: true,
-          type: "setWallet",
-          address: address
-        };
-        window.parent.postMessage(streamlitMsg, "*");
-      } catch (err) {
-        output.textContent = `Connection failed: ${err.message}`;
-      }
+      const peraWallet = new window.PeraWalletConnect();
+      peraWallet
+        .connect()
+        .then((accounts) => {
+          const address = accounts[0];
+          output.textContent = `Connected address: ${address}`;
+          window.parent.postMessage({
+            isStreamlitMessage: true,
+            type: "setWallet",
+            address: address,
+          }, "*");
+        })
+        .catch((err) => {
+          output.textContent = `Connection failed: ${err.message}`;
+          window.parent.postMessage({
+            isStreamlitMessage: true,
+            type: "walletError",
+            error: err.message,
+          }, "*");
+        });
     }
 
     button.addEventListener("click", connectWallet);

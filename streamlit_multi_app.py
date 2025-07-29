@@ -131,38 +131,41 @@ def marketplace_tab():
 
 def connect_wallet_tab():
     st.header("Connect Wallet")
+
+    components.html(open("pera_wallet_widget.html", "r").read(), height=300)
+
     if st.session_state.get("wallet_address"):
         st.success(f"Wallet connected: {st.session_state['wallet_address']}")
-        return
-
-    components.html(open("pera_wallet_widget.html").read(), height=250)
 
     js = """
     await new Promise((resolve) => {
-        window.addEventListener(
-            'message',
-            (event) => {
-                const data = event.data;
-                if (data && data.isStreamlitMessage && data.type === 'setWallet') {
-                    resolve(data.address);
-                }
-            },
-            { once: true }
-        );
+        const handler = (event) => {
+            const data = event.data;
+            if (data && data.isStreamlitMessage && (data.type === 'setWallet' || data.type === 'walletError')) {
+                window.removeEventListener('message', handler);
+                resolve(data);
+            }
+        };
+        window.addEventListener('message', handler);
     });
     """
 
-    addr = st_javascript(js, key="wallet_listener")
-    if addr:
-        st.session_state["wallet_address"] = addr
-        st.session_state["wallet"] = addr  # backward compatibility
-        user = st.session_state.get("user")
-        if supabase is not None and user is not None:
-            try:
-                supabase.table("wallets").upsert({"user_id": user.id, "address": addr}).execute()
-            except Exception:
-                pass
-        st.experimental_rerun()
+    data = st_javascript(js, key="wallet_listener")
+    if data:
+        if isinstance(data, dict) and data.get("type") == "setWallet":
+            addr = data.get("address")
+            if addr:
+                st.session_state["wallet_address"] = addr
+                st.session_state["wallet"] = addr  # backward compatibility
+                user = st.session_state.get("user")
+                if supabase is not None and user is not None:
+                    try:
+                        supabase.table("wallets").upsert({"user_id": user.id, "address": addr}).execute()
+                    except Exception:
+                        pass
+                st.experimental_rerun()
+        elif isinstance(data, dict) and data.get("type") == "walletError":
+            st.error(f"Connection failed: {data.get('error')}")
 
 def list_item_tab():
     st.header("List an Item")
