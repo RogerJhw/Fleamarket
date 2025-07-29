@@ -5,6 +5,7 @@ from datetime import datetime
 from supabase import create_client, Client
 
 import streamlit as st
+import streamlit.components.v1 as components
 from streamlit_javascript import st_javascript
 
 st.set_page_config(page_title="Tokenized Fleamarket", layout="wide")
@@ -130,14 +131,38 @@ def marketplace_tab():
 
 def connect_wallet_tab():
     st.header("Connect Wallet")
-    if st.button("Connect Pera Wallet"):
-        addr = connect_wallet()
-        if addr:
-            st.success(f"Connected address: {addr}")
-        else:
-            st.error("Failed to connect Pera Wallet")
-    elif st.session_state.get("wallet_address"):
-        st.success(f"Connected address: {st.session_state['wallet_address']}" )
+    if st.session_state.get("wallet_address"):
+        st.success(f"Wallet connected: {st.session_state['wallet_address']}")
+        return
+
+    components.html(open("pera_wallet_widget.html").read(), height=250)
+
+    js = """
+    await new Promise((resolve) => {
+        window.addEventListener(
+            'message',
+            (event) => {
+                const data = event.data;
+                if (data && data.isStreamlitMessage && data.type === 'setWallet') {
+                    resolve(data.address);
+                }
+            },
+            { once: true }
+        );
+    });
+    """
+
+    addr = st_javascript(js, key="wallet_listener")
+    if addr:
+        st.session_state["wallet_address"] = addr
+        st.session_state["wallet"] = addr  # backward compatibility
+        user = st.session_state.get("user")
+        if supabase is not None and user is not None:
+            try:
+                supabase.table("wallets").upsert({"user_id": user.id, "address": addr}).execute()
+            except Exception:
+                pass
+        st.experimental_rerun()
 
 def list_item_tab():
     st.header("List an Item")
