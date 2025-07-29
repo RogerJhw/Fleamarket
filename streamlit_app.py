@@ -27,7 +27,7 @@ def connect_wallet() -> str | None:
     js_code = """
     const load = async () => {
         if (!window.PeraWalletConnect) {
-            await import('https://perawallet.app/pera-wallet-connect.js');
+            await import('https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js');
         }
         const pera = new window.PeraWalletConnect();
         const accounts = await pera.connect();
@@ -67,7 +67,7 @@ def mint_asa(name: str, description: str, price: int, image: bytes) -> int | Non
     js = f"""
     const sign = async () => {{
         if (!window.PeraWalletConnect) {{
-            await import('https://perawallet.app/pera-wallet-connect.js');
+            await import('https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js');
         }}
         const pera = new window.PeraWalletConnect();
         const blob = new Uint8Array(atob('{txn.signing_msg()}').split('').map(c=>c.charCodeAt(0)));
@@ -111,7 +111,7 @@ def send_payment(sender: str, receiver: str, amount: int) -> str | None:
     js = f"""
     const signPay = async () => {{
         if (!window.PeraWalletConnect) {{
-            await import('https://perawallet.app/pera-wallet-connect.js');
+            await import('https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js');
         }}
         const pera = new window.PeraWalletConnect();
         const {{ signedTx }} = await pera.signTransaction([{{ txn: {tx_json} }}]);
@@ -138,7 +138,7 @@ def transfer_asset(asset_id: int, sender: str, receiver: str) -> str | None:
     js = f"""
     const signTrans = async () => {{
         if (!window.PeraWalletConnect) {{
-            await import('https://perawallet.app/pera-wallet-connect.js');
+            await import('https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js');
         }}
         const pera = new window.PeraWalletConnect();
         const {{ signedTx }} = await pera.signTransaction([{{ txn: {tx_json} }}]);

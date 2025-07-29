@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>Pera Wallet Connect</title>
-    <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js"></script>
   </head>
   <body>
     <button id="connect">Connect Pera Wallet</button>
@@ -10,13 +10,31 @@
 
     <script>
       const connect = async () => {
+        console.log('window keys:', Object.keys(window));
+        console.log('PeraWalletConnect type:', typeof window.PeraWalletConnect);
+        let ctor = null;
+        if (typeof window.PeraWalletConnect === 'function') {
+          ctor = window.PeraWalletConnect;
+        } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.default === 'function') {
+          ctor = window.PeraWalletConnect.default;
+        } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.Connect === 'function') {
+          ctor = window.PeraWalletConnect.Connect;
+        }
+        if (!ctor) {
+          document.getElementById('status').textContent = 'Unable to load PeraWalletConnect.';
+          return;
+        }
         try {
-          const peraWallet = new window.PeraWalletConnect();
+          const peraWallet = new ctor();
           const accounts = await peraWallet.connect();
-          document.getElementById('status').textContent = "Connected: " + accounts[0];
-          window.parent.postMessage({ wallet: accounts[0] }, "*");
+          if (accounts && accounts.length > 0) {
+            document.getElementById('status').textContent = 'Connected: ' + accounts[0];
+            window.parent.postMessage({ type: 'wallet_connected', address: accounts[0] }, '*');
+          } else {
+            document.getElementById('status').textContent = 'No account selected.';
+          }
         } catch (err) {
-          document.getElementById('status').textContent = "Connection failed";
+          document.getElementById('status').textContent = 'Connection failed: ' + err;
           console.error(err);
         }
       };
