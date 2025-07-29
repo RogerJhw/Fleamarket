@@ -31,23 +31,39 @@ if "user" not in st.session_state:
     st.session_state["user"] = None
 
 
-def connect_wallet():
+def connect_wallet() -> str | None:
     """Connect to Pera wallet via WalletConnect."""
+    if st.session_state.get("wallet"):
+        return st.session_state["wallet"]
+
     js = """
-    const connect = async () => {
-        if (!window.PeraWalletConnect) {
-            await import('https://perawallet.app/pera-wallet-connect.js');
+    async function loadPera() {
+        if (typeof window.PeraWalletConnect === 'undefined') {
+            await new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/peraWalletConnect.min.js';
+                script.onload = resolve;
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
         }
-        const pera = new window.PeraWalletConnect();
+        const pera = new PeraWalletConnect();
         const accounts = await pera.connect();
-        return accounts[0] || '';
-    };
-    return await connect();
+        return accounts[0] ?? '';
+    }
+    return await loadPera();
     """
+
     addr = st_javascript(js, key="connect")
     if addr:
         st.session_state["wallet"] = addr
-    return addr
+        user = st.session_state.get("user")
+        if supabase is not None and user is not None:
+            try:
+                supabase.table("wallets").upsert({"user_id": user.id, "address": addr}).execute()
+            except Exception:
+                pass
+    return addr or None
 
 
 def login_page():
@@ -107,10 +123,15 @@ def marketplace_tab():
 
 def connect_wallet_tab():
     st.header("Connect Wallet")
-    if st.button("Connect Pera Wallet"):
-        connect_wallet()
-    if st.session_state.get("wallet"):
-        st.success(f"Connected address: {st.session_state['wallet']}")
+    connected = st.session_state.get("wallet")
+    if connected:
+        st.success(f"Connected address: {connected}")
+        st.button("Connect Pera Wallet", disabled=True)
+    else:
+        if st.button("Connect Pera Wallet"):
+            addr = connect_wallet()
+            if addr:
+                st.success(f"Connected address: {addr}")
 
 def list_item_tab():
     st.header("List an Item")
