@@ -132,10 +132,38 @@ def marketplace_tab():
 def connect_wallet_tab():
     st.header("Connect Wallet")
 
-    components.iframe("public/pera_wallet_connector.html", height=300)
-
-    if st.session_state.get("wallet_address"):
-        st.success(f"Wallet connected: {st.session_state['wallet_address']}")
+    components.html(
+        """
+<html>
+  <head>
+    <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect"></script>
+    <script>
+      async function connectWallet() {
+        try {
+          alert("Script started");
+          console.log("window.PeraWalletConnect is:", window.PeraWalletConnect);
+          if (typeof window.PeraWalletConnect !== "function") {
+            document.body.innerHTML = "<p style='color:red;'>PeraWalletConnect is not a constructor</p>";
+            return;
+          }
+          const peraWallet = new window.PeraWalletConnect();
+          const accounts = await peraWallet.connect();
+          document.body.innerHTML = "<p style='color:green;'>Connected: " + accounts[0] + "</p>";
+          window.parent.postMessage({ wallet: accounts[0] }, "*");
+        } catch (err) {
+          console.error(err);
+          document.body.innerHTML = "<p style='color:red;'>Connection failed: " + err + "</p>";
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <button onclick="connectWallet()">Connect Wallet</button>
+  </body>
+</html>
+        """,
+        height=300,
+    )
 
     js = """
     await new Promise((resolve) => {
@@ -161,6 +189,9 @@ def connect_wallet_tab():
             except Exception:
                 pass
         st.experimental_rerun()
+
+    if st.session_state.get("wallet_address"):
+        st.success(f"Wallet connected: {st.session_state['wallet_address']}")
 
 def list_item_tab():
     st.header("List an Item")
