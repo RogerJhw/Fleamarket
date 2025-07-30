@@ -1,4 +1,3 @@
-
 import os
 from datetime import datetime
 
@@ -6,7 +5,6 @@ from supabase import create_client, Client
 
 import streamlit as st
 import streamlit.components.v1 as components
-from streamlit_javascript import st_javascript
 
 st.set_page_config(page_title="Tokenized Fleamarket", layout="wide")
 
@@ -26,52 +24,8 @@ if "selected_item" not in st.session_state:
     st.session_state["selected_item"] = None
 if "selected_item_id" not in st.session_state:
     st.session_state["selected_item_id"] = None
-if "wallet" not in st.session_state:
-    st.session_state["wallet"] = None
-if "wallet_address" not in st.session_state:
-    st.session_state["wallet_address"] = None
 if "user" not in st.session_state:
     st.session_state["user"] = None
-
-
-def connect_wallet() -> str | None:
-    """Open the Pera Wallet connect modal and return the selected address."""
-    if st.session_state.get("wallet_address"):
-        return st.session_state["wallet_address"]
-
-    js = """
-    async function connectPera() {
-        try {
-            if (typeof window.PeraWalletConnect === 'undefined') {
-                await new Promise((resolve, reject) => {
-                    const script = document.createElement('script');
-                    script.src = 'https://unpkg.com/@perawallet/connect';
-                    script.onload = resolve;
-                    script.onerror = reject;
-                    document.head.appendChild(script);
-                });
-            }
-            const pera = new PeraWalletConnect();
-            const accounts = await pera.connect();
-            return accounts[0] ?? '';
-        } catch (e) {
-            return '';
-        }
-    }
-    return await connectPera();
-    """
-
-    addr = st_javascript(js, key="connect_wallet")
-    if addr:
-        st.session_state["wallet_address"] = addr
-        st.session_state["wallet"] = addr  # backward compatibility
-        user = st.session_state.get("user")
-        if supabase is not None and user is not None:
-            try:
-                supabase.table("wallets").upsert({"user_id": user.id, "address": addr}).execute()
-            except Exception:
-                pass
-    return addr or None
 
 
 def login_page():
@@ -95,6 +49,7 @@ def login_page():
         except Exception as e:
             st.error(f"Sign up failed: {e}")
 
+
 if st.session_state.get("user") is None:
     login_page()
     st.stop()
@@ -102,6 +57,7 @@ else:
     user = st.session_state["user"]
     if getattr(user, "email_confirmed_at", None):
         st.success("Email verified")
+
 
 def render_item_card(idx: int, item: dict):
     cols = st.columns([1, 2])
@@ -117,6 +73,7 @@ def render_item_card(idx: int, item: dict):
             st.experimental_set_query_params(tab="Bid")
             st.experimental_rerun()
 
+
 def marketplace_tab():
     st.header("Marketplace")
     if supabase is None:
@@ -129,81 +86,11 @@ def marketplace_tab():
     for idx, item in enumerate(items):
         render_item_card(idx, item)
 
+
 def connect_wallet_tab():
     st.header("Connect Wallet")
+    components.iframe("https://flea-wallet-widget.com", height=600, width=400)
 
-    components.html(
-        """
-<html>
-  <head>
-    <script src="https://cdn.jsdelivr.net/npm/@perawallet/connect@latest/dist/perawallet-connect.min.js"></script>
-    <script>
-      async function connectWallet() {
-        try {
-          console.log("window keys:", Object.keys(window));
-          console.log("PeraWalletConnect type:", typeof window.PeraWalletConnect);
-          let ctor = null;
-          if (typeof window.PeraWalletConnect === "function") {
-            ctor = window.PeraWalletConnect;
-          } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.default === "function") {
-            ctor = window.PeraWalletConnect.default;
-          } else if (window.PeraWalletConnect && typeof window.PeraWalletConnect.Connect === "function") {
-            ctor = window.PeraWalletConnect.Connect;
-          }
-          if (!ctor) {
-            document.body.innerHTML = "<p style='color:red;'>Unable to load PeraWalletConnect. Please refresh.</p>";
-            return;
-          }
-          const peraWallet = new ctor();
-          const accounts = await peraWallet.connect();
-          if (accounts && accounts.length > 0) {
-            document.body.innerHTML = "<p style='color:green;'>Connected: " + accounts[0] + "</p>";
-            window.parent.postMessage({ type: 'wallet_connected', address: accounts[0] }, "*");
-          } else {
-            document.body.innerHTML = "<p style='color:red;'>No account selected.</p>";
-          }
-        } catch (err) {
-          console.error(err);
-          document.body.innerHTML = "<p style='color:red;'>Connection failed: " + err + "</p>";
-        }
-      }
-    </script>
-  </head>
-  <body>
-    <button onclick="connectWallet()">Connect Wallet</button>
-  </body>
-</html>
-        """,
-        height=300,
-    )
-
-    js = """
-    await new Promise((resolve) => {
-        const handler = (event) => {
-            const data = event.data;
-            if (data && data.wallet) {
-                window.removeEventListener('message', handler);
-                resolve(data.wallet);
-            }
-        };
-        window.addEventListener('message', handler);
-    });
-    """
-
-    addr = st_javascript(js, key="wallet_listener")
-    if isinstance(addr, str) and addr:
-        st.session_state["wallet_address"] = addr
-        st.session_state["wallet"] = addr  # backward compatibility
-        user = st.session_state.get("user")
-        if supabase is not None and user is not None:
-            try:
-                supabase.table("wallets").upsert({"user_id": user.id, "address": addr}).execute()
-            except Exception:
-                pass
-        st.experimental_rerun()
-
-    if st.session_state.get("wallet_address"):
-        st.success(f"Wallet connected: {st.session_state['wallet_address']}")
 
 def list_item_tab():
     st.header("List an Item")
@@ -240,6 +127,7 @@ def list_item_tab():
         st.success("Item listed")
         st.experimental_rerun()
 
+
 def bid_tab():
     item_id = st.session_state.get("selected_item_id")
     if not item_id:
@@ -263,6 +151,7 @@ def bid_tab():
             st.experimental_rerun()
         else:
             st.error("Bid must be greater than current bid")
+
 
 # Top navigation using tabs
 tab_labels = ["Marketplace", "Connect Wallet", "List Item", "Bid"]
