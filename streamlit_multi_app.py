@@ -200,6 +200,7 @@ def list_item_tab():
             "image_url": image_url,
             "current_bid": price,
         }
+        st.write("Insert payload:", data)
         supabase.table("items").insert(data).execute()
         st.success("Item listed")
         st.experimental_rerun()
