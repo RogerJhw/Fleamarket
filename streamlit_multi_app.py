@@ -134,7 +134,7 @@ def list_item_tab():
                 logging.info("Attempting to upload file: %s", fname)
 
                 # ✅ Correct upload with upsert as keyword arg
-                upload_response = supabase.storage.from_("images").upload(fname, file_bytes, upsert=True)
+                upload_response = supabase.storage.from_("images").upload(fname, file_bytes)
                 logging.info("Upload response: %s", upload_response)
 
                 # Get the public URL
