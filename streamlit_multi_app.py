@@ -15,6 +15,16 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+    # Set the user session if a token has already been stored
+    token = st.session_state.get("user", {}).get("access_token")
+    refresh = st.session_state.get("user", {}).get("refresh_token")
+    if token:
+        try:
+            supabase.auth.set_session(token, refresh or "")
+            auth_user = supabase.auth.get_user()
+            logging.info("Authenticated user UID: %s", getattr(auth_user.user, "id", "unknown"))
+        except Exception as exc:
+            logging.error("Failed to restore session: %s", exc)
 else:
     st.error("Supabase credentials not configured")
 
@@ -46,6 +56,26 @@ if "selected_item_id" not in st.session_state:
     st.session_state["selected_item_id"] = None
 if "user" not in st.session_state:
     st.session_state["user"] = None
+
+
+def ensure_supabase_session() -> bool:
+    """Ensure Supabase client is using the authenticated user's session."""
+    if supabase is None:
+        return False
+    token = st.session_state.get("user", {}).get("access_token")
+    refresh = st.session_state.get("user", {}).get("refresh_token")
+    if not token:
+        st.error("Missing user token. Please log in again.")
+        return False
+    try:
+        supabase.auth.set_session(token, refresh or "")
+        auth_user = supabase.auth.get_user()
+        logging.info("Authenticated user UID: %s", getattr(auth_user.user, "id", "unknown"))
+        return True
+    except Exception as exc:
+        st.error("Failed to set user session")
+        logging.error("Supabase set_session error: %s", exc)
+        return False
 
 
 def login_page():
@@ -123,6 +153,8 @@ def list_item_tab():
         if supabase is None or st.session_state.get("user") is None:
             st.error("Please log in")
             return
+        if not ensure_supabase_session():
+            return
         if not title:
             st.error("Please provide a title")
             return
@@ -180,6 +212,8 @@ def bid_tab():
     st.write(f"Current bid: {item.get('current_bid')}")
     bid_amt = st.number_input("Bid amount", min_value=float(item.get("current_bid", 0)), step=0.01)
     if st.button("Place Bid"):
+        if not ensure_supabase_session():
+            return
         if bid_amt > float(item.get("current_bid", 0)):
             supabase.table("items").update({"current_bid": bid_amt}).eq("id", item_id).execute()
             st.success("Bid placed")
