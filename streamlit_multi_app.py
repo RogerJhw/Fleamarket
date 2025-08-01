@@ -145,7 +145,8 @@ def list_item_tab():
                 if not image_url or not image_url.startswith("http"):
                     logging.error("Invalid image URL returned: %s", image_url)
                     image_url = PLACEHOLDER_IMAGE
-             except Exception as exc:
+            
+            except Exception as exc:
                 st.warning("Failed to upload image")
                 logging.error("Image upload failed: %s", exc)
                 image_url = PLACEHOLDER_IMAGE
