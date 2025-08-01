@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import logging
 
 from supabase import create_client, Client
 
@@ -16,6 +17,25 @@ if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 else:
     st.error("Supabase credentials not configured")
+
+# Default image used when an item has no valid image URL
+PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=No+Image"
+
+logging.basicConfig(level=logging.INFO)
+
+
+def render_image(url: str) -> None:
+    """Safely display an image, falling back to a placeholder."""
+    if not url:
+        st.image(PLACEHOLDER_IMAGE, use_column_width=True)
+        st.caption("No image available")
+        return
+    try:
+        st.image(url, use_column_width=True)
+    except Exception as exc:
+        logging.warning("Failed to load image %s: %s", url, exc)
+        st.image(PLACEHOLDER_IMAGE, use_column_width=True)
+        st.caption("Image unavailable")
 
 # Session state initialization
 if "listings" not in st.session_state:
@@ -62,8 +82,7 @@ else:
 def render_item_card(idx: int, item: dict):
     cols = st.columns([1, 2])
     with cols[0]:
-        if item.get("image_url"):
-            st.image(item["image_url"], use_column_width=True)
+        render_image(item.get("image_url"))
     with cols[1]:
         st.subheader(item.get("title"))
         st.write(item.get("description", ""))
@@ -107,15 +126,16 @@ def list_item_tab():
         if not title:
             st.error("Please provide a title")
             return
-        image_url = None
+        image_url = PLACEHOLDER_IMAGE
         if uploaded:
             file_bytes = uploaded.read()
             fname = f"{st.session_state['user'].id}_{int(datetime.utcnow().timestamp())}_{uploaded.name}"
             try:
                 supabase.storage.from_("images").upload(fname, file_bytes, {"upsert": True})
                 image_url = supabase.storage.from_("images").get_public_url(fname).get("publicUrl")
-            except Exception:
+            except Exception as exc:
                 st.warning("Failed to upload image")
+                logging.error("Image upload failed: %s", exc)
         data = {
             "user_id": st.session_state["user"].id,
             "title": title,
@@ -139,8 +159,7 @@ def bid_tab():
         st.error("Item not found")
         return
     st.header(item.get("title"))
-    if item.get("image_url"):
-        st.image(item["image_url"])
+    render_image(item.get("image_url"))
     st.write(item.get("description", ""))
     st.write(f"Current bid: {item.get('current_bid')}")
     bid_amt = st.number_input("Bid amount", min_value=float(item.get("current_bid", 0)), step=0.01)
