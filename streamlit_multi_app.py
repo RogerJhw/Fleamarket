@@ -150,57 +150,36 @@ def connect_wallet_tab():
     components.iframe("https://flea-wallet-widget.com", height=600, width=400)
 
 
+import time
+
 def list_item_tab():
-    st.header("List an Item")
-    with st.form("list_form"):
-        title = st.text_input("Item title")
-        description = st.text_area("Description")
-        price = st.number_input("Starting bid", min_value=0.0, step=0.01)
-        uploaded = st.file_uploader("Image", type=["png", "jpg", "jpeg"])
-        submit = st.form_submit_button("List Item")
-    if submit:
-        if supabase is None or st.session_state.get("user") is None:
-            st.error("Please log in")
-            return
-        if not ensure_supabase_session():
-            return
-        if not title:
-            st.error("Please provide a title")
-            return
-        image_url = PLACEHOLDER_IMAGE
-        if uploaded:
+    title = st.text_input("Item title")
+    description = st.text_area("Description")
+    price = st.number_input("Starting bid", min_value=0.00, step=0.01)
+    uploaded_file = st.file_uploader("Image", type=["png", "jpg", "jpeg"])
+
+    if st.button("List Item"):
+        image_url = PLACEHOLDER_IMAGE  # default
+        if uploaded_file:
             try:
-                file_bytes = uploaded.read()
-                fname = f"{st.session_state['user'].id}_{int(datetime.utcnow().timestamp())}_{uploaded.name}"
-                logging.info("Attempting to upload file: %s", fname)
+                image_bytes = uploaded_file.read()
+                file_name = f"{str(st.session_state['user']['id'])}_{int(time.time())}_{uploaded_file.name}"
 
-                # ✅ Correct upload with upsert as keyword arg
-                upload_response = supabase.storage.from_("images").upload(fname, file_bytes)
-                logging.info("Upload response: %s", upload_response)
+                # Upload image to Supabase Storage
+                supabase.storage.from_("images").upload(file_name, image_bytes)
 
-                # Get the public URL
-                image_url = supabase.storage.from_("images").get_public_url(fname).get("publicUrl")
-                logging.info("Generated public URL: %s", image_url)
-
-                # Validate the URL
-                if not image_url or not image_url.startswith("http"):
-                    logging.error("Invalid image URL returned: %s", image_url)
-                    image_url = PLACEHOLDER_IMAGE
-            
+                # Construct the public URL manually
+                image_url = f"https://csojmedglbaofffdxasx.supabase.co/storage/v1/object/public/images/{file_name}"
             except Exception as exc:
-                st.warning("Failed to upload image")
                 logging.error("Image upload failed: %s", exc)
-                image_url = PLACEHOLDER_IMAGE
-
 
         data = {
-            "user_id": st.session_state["user"].id,
+            "user_id": st.session_state["user"]["id"],
             "title": title,
             "description": description,
             "image_url": image_url,
             "current_bid": price,
         }
-        st.write("Insert payload:", data)
         supabase.table("items").insert(data).execute()
         st.success("Item listed")
         st.experimental_rerun()
