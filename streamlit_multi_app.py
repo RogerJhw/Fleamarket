@@ -128,14 +128,27 @@ def list_item_tab():
             return
         image_url = PLACEHOLDER_IMAGE
         if uploaded:
-            file_bytes = uploaded.read()
-            fname = f"{st.session_state['user'].id}_{int(datetime.utcnow().timestamp())}_{uploaded.name}"
             try:
-                supabase.storage.from_("images").upload(fname, file_bytes, {"upsert": True})
+                file_bytes = uploaded.read()
+                fname = f"{st.session_state['user'].id}_{int(datetime.utcnow().timestamp())}_{uploaded.name}"
+                logging.info("Attempting to upload file: %s", fname)
+
+                # Upload to Supabase Storage
+                upload_response = supabase.storage.from_("images").upload(fname, file_bytes, {"upsert": True})
+                logging.info("Upload response: %s", upload_response)
+
+                # Get public URL
                 image_url = supabase.storage.from_("images").get_public_url(fname).get("publicUrl")
+                logging.info("Generated public URL: %s", image_url)
+
+                if not image_url or not image_url.startswith("http"):
+                    logging.error("Invalid image URL returned: %s", image_url)
+                    image_url = PLACEHOLDER_IMAGE
             except Exception as exc:
                 st.warning("Failed to upload image")
                 logging.error("Image upload failed: %s", exc)
+                image_url = PLACEHOLDER_IMAGE
+
         data = {
             "user_id": st.session_state["user"].id,
             "title": title,
