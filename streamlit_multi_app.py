@@ -63,8 +63,9 @@ def ensure_supabase_session() -> bool:
     """Ensure Supabase client is using the authenticated user's session."""
     if supabase is None:
         return False
-    token = st.session_state.get("user", {}).get("access_token")
-    refresh = st.session_state.get("user", {}).get("refresh_token")
+    user = st.session_state.get("user")
+    token = getattr(user, "access_token", None)
+    refresh = getattr(user, "refresh_token", None)
     if not token:
         st.error("Missing user token. Please log in again.")
         return False
