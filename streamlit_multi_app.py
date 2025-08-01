@@ -16,8 +16,9 @@ supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
     # Set the user session if a token has already been stored
-    token = st.session_state.get("user", {}).get("access_token")
-    refresh = st.session_state.get("user", {}).get("refresh_token")
+    user = st.session_state.get("user")
+    token = getattr(user, "access_token", None)
+    refresh = getattr(user, "refresh_token", None)
     if token:
         try:
             supabase.auth.set_session(token, refresh or "")
