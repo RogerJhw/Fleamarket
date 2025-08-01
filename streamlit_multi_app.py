@@ -163,8 +163,7 @@ def list_item_tab():
         if uploaded_file:
             try:
                 image_bytes = uploaded_file.read()
-                file_name = f"{str(st.session_state['user']['id'])}_{int(time.time())}_{uploaded_file.name}"
-
+                file_name = f"{st.session_state['user'].id}_{int(time.time())}_{uploaded_file.name}"
                 # Upload image to Supabase Storage
                 supabase.storage.from_("images").upload(file_name, image_bytes)
 
@@ -174,7 +173,7 @@ def list_item_tab():
                 logging.error("Image upload failed: %s", exc)
 
         data = {
-            "user_id": st.session_state["user"]["id"],
+            "user_id": st.session_state["user"].id,
             "title": title,
             "description": description,
             "image_url": image_url,
