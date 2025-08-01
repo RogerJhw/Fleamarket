@@ -15,15 +15,18 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 supabase: Client | None = None
 if SUPABASE_URL and SUPABASE_KEY:
     supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-    # Set the user session if a token has already been stored
-    user = st.session_state.get("user")
-    token = getattr(user, "access_token", None)
-    refresh = getattr(user, "refresh_token", None)
+    # Restore existing session if present
+    session_obj = st.session_state.get("session")
+    token = getattr(session_obj, "access_token", None)
+    refresh = getattr(session_obj, "refresh_token", None)
     if token:
         try:
             supabase.auth.set_session(token, refresh or "")
             auth_user = supabase.auth.get_user()
-            logging.info("Authenticated user UID: %s", getattr(auth_user.user, "id", "unknown"))
+            logging.info(
+                "Authenticated user UID: %s",
+                getattr(auth_user.user, "id", "unknown"),
+            )
         except Exception as exc:
             logging.error("Failed to restore session: %s", exc)
 else:
@@ -57,17 +60,19 @@ if "selected_item_id" not in st.session_state:
     st.session_state["selected_item_id"] = None
 if "user" not in st.session_state:
     st.session_state["user"] = None
+if "session" not in st.session_state:
+    st.session_state["session"] = None
 
 
 def ensure_supabase_session() -> bool:
     """Ensure Supabase client is using the authenticated user's session."""
     if supabase is None:
         return False
-    user = st.session_state.get("user")
-    token = getattr(user, "access_token", None)
-    refresh = getattr(user, "refresh_token", None)
+    session_obj = st.session_state.get("session")
+    token = getattr(session_obj, "access_token", None)
+    refresh = getattr(session_obj, "refresh_token", None)
     if not token:
-        st.error("Missing user token. Please log in again.")
+        st.error("Missing user session. Please log in again.")
         return False
     try:
         supabase.auth.set_session(token, refresh or "")
@@ -90,6 +95,7 @@ def login_page():
         try:
             res = supabase.auth.sign_in_with_password({"email": email, "password": password})
             st.session_state["user"] = res.user
+            st.session_state["session"] = res.session
             st.experimental_rerun()
         except Exception as e:
             st.error(f"Sign in failed: {e}")
@@ -97,6 +103,7 @@ def login_page():
         try:
             res = supabase.auth.sign_up({"email": email, "password": password})
             st.session_state["user"] = res.user
+            st.session_state["session"] = res.session
             st.experimental_rerun()
         except Exception as e:
             st.error(f"Sign up failed: {e}")
@@ -232,6 +239,7 @@ if st.session_state.get("user") is not None:
 if st.sidebar.button("Sign Out"):
     supabase.auth.sign_out()
     st.session_state["user"] = None
+    st.session_state["session"] = None
     st.experimental_rerun()
 
 query_params = st.experimental_get_query_params()
