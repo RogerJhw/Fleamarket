@@ -135,7 +135,7 @@ def render_item_card(idx: int, item: dict):
     with cols[0]:
         render_image(item.get("image_url"))
     with cols[1]:
-        st.subheader((item.get("title"))
+        st.subheader(item.get("title"))
         st.write(item.get("description", ""))
         st.write(f"Current bid: {item.get('current_bid')}")
         if st.button("View", key=f"bid_{idx}"):
