@@ -131,8 +131,8 @@ An alternative multi-tab demo is available in `streamlit_multi_app.py`:
 streamlit run streamlit_multi_app.py
 ```
 
-This version organizes the interface into Marketplace, Connect Wallet, List Item
-and Bid tabs using `st.sidebar.radio`.
+This version organizes the interface into Marketplace, Connect Wallet, Your Listings
+and Bid tabs using `st.tabs`.
 
 ## Supabase Integration
 

@@ -74,6 +74,8 @@ if "user" not in st.session_state:
     st.session_state["user"] = None
 if "session" not in st.session_state:
     st.session_state["session"] = None
+if "show_create_form" not in st.session_state:
+    st.session_state["show_create_form"] = False
 
 
 def ensure_supabase_session() -> bool:
@@ -164,7 +166,7 @@ def connect_wallet_tab():
 
 import time
 
-def list_item_tab():
+def create_listing_form():
     title = st.text_input("Item title")
     description = st.text_area("Description")
     price = st.number_input("Starting bid", min_value=0.00, step=0.01)
@@ -193,7 +195,33 @@ def list_item_tab():
         }
         supabase.table("items").insert(data).execute()
         st.success("Item listed")
+        st.session_state["show_create_form"] = False
         st.experimental_rerun()
+
+
+def user_listings_tab():
+    st.header("Your Listings")
+    if st.session_state.get("show_create_form"):
+        create_listing_form()
+    else:
+        if st.button("Create New Listing"):
+            st.session_state["show_create_form"] = True
+
+    if supabase is None:
+        st.error("Supabase not configured")
+        return
+    res = (
+        supabase.table("items")
+        .select("*")
+        .eq("user_id", st.session_state["user"].id)
+        .order("created_at", desc=True)
+        .execute()
+    )
+    items = res.data or []
+    if not items:
+        st.info("You have not created any listings.")
+    for idx, item in enumerate(items):
+        render_item_card(idx, item)
 
 
 def bid_tab():
@@ -223,7 +251,7 @@ def bid_tab():
 
 
 # Top navigation using tabs
-tab_labels = ["Marketplace", "Connect Wallet", "List Item", "Bid"]
+tab_labels = ["Marketplace", "Connect Wallet", "Your Listings", "Bid"]
 
 if st.session_state.get("user") is not None:
     st.sidebar.write(f"Logged in as: {st.session_state['user'].email}")
@@ -238,7 +266,7 @@ active_tab = query_params.get("tab", ["Marketplace"])[0]
 if active_tab not in tab_labels:
     active_tab = "Marketplace"
 
-tab_marketplace, tab_wallet, tab_list, tab_bid = st.tabs(tab_labels)
+tab_marketplace, tab_wallet, tab_user_listings, tab_bid = st.tabs(tab_labels)
 
 with tab_marketplace:
     marketplace_tab()
@@ -246,8 +274,8 @@ with tab_marketplace:
 with tab_wallet:
     connect_wallet_tab()
 
-with tab_list:
-    list_item_tab()
+with tab_user_listings:
+    user_listings_tab()
 
 with tab_bid:
     bid_tab()
