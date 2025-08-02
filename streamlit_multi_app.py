@@ -131,8 +131,7 @@ else:
     if getattr(user, "email_confirmed_at", None):
         st.success("Email verified")
 
-
-def render_item_card(idx: int, item: dict):
+def render_item_card(idx: int, item: dict, prefix: str = ""):
     cols = st.columns([1, 2])
     with cols[0]:
         render_image(item.get("image_url"))
@@ -140,7 +139,7 @@ def render_item_card(idx: int, item: dict):
         st.subheader(item.get("title"))
         st.write(item.get("description", ""))
         st.write(f"Current bid: {item.get('current_bid')}")
-        if st.button("View", key=f"bid_{item['id']}"):
+        if st.button("View", key=f"{prefix}_view_button_bid_{item['id']}"):
             st.session_state["selected_item_id"] = item["id"]
             st.experimental_set_query_params(tab="Bid")
             st.experimental_rerun()
@@ -156,7 +155,8 @@ def marketplace_tab():
     if not items:
         st.info("No items listed yet.")
     for idx, item in enumerate(items):
-        render_item_card(idx, item)
+        render_item_card(idx, item, prefix="marketplace")
+
 
 
 def connect_wallet_tab():
@@ -221,7 +221,8 @@ def user_listings_tab():
     if not items:
         st.info("You have not created any listings.")
     for idx, item in enumerate(items):
-        render_item_card(idx, item)
+        render_item_card(idx, item, prefix="user")
+
 
 
 def bid_tab():
