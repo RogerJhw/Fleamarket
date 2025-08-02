@@ -66,10 +66,6 @@ def render_image(url: str) -> None:
 # Session state initialization
 if "listings" not in st.session_state:
     st.session_state["listings"] = []
-if "selected_item" not in st.session_state:
-    st.session_state["selected_item"] = None
-if "selected_item_id" not in st.session_state:
-    st.session_state["selected_item_id"] = None
 if "user" not in st.session_state:
     st.session_state["user"] = None
 if "session" not in st.session_state:
@@ -129,48 +125,37 @@ else:
     if getattr(user, "email_confirmed_at", None):
         st.success("Email verified")
 
-def render_item_card(idx: int, item: dict, prefix: str = ""):
+def render_item_card(idx: int, item: dict, show_delete: bool = False):
     cols = st.columns([1, 2])
     with cols[0]:
         render_image(item.get("image_url"))
     with cols[1]:
         st.markdown(f"### {item.get('title')}")
         st.write(item.get("description", ""))
-        st.write(f"Current bid: {item.get('current_bid')}")
+        st.write(f"Current bid: ${item.get('current_bid', 0):.2f}")
         st.write(f"Highest bidder: {item.get('highest_bidder', 'None')}")
-        if st.button("View", key=f"{prefix}_view_btn_{item['id']}"):
-            st.session_state["selected_item_id"] = item["id"]
-            st.experimental_rerun()
-        if item.get("user_id") == st.session_state.get("user").id:
-            if st.button("Delete", key=f"{prefix}_delete_btn_{item['id']}"):
+        bid_amt = st.number_input(
+            "Bid amount",
+            min_value=float(item.get("current_bid", 0)),
+            step=0.01,
+            key=f"bid_input_{item['id']}"
+        )
+        if st.button("Place Bid", key=f"place_bid_{item['id']}"):
+            if not ensure_supabase_session():
+                return
+            if bid_amt > float(item.get("current_bid", 0)):
+                supabase.table("items").update({
+                    "current_bid": bid_amt,
+                    "highest_bidder": st.session_state["user"].id,
+                }).eq("id", item["id"]).execute()
+                st.success("Bid placed")
+                st.experimental_rerun()
+            else:
+                st.error("Bid must be greater than current bid")
+        if show_delete:
+            if st.button("Delete", key=f"delete_btn_{item['id']}"):
                 supabase.table("items").delete().eq("id", item["id"]).execute()
                 st.experimental_rerun()
-
-
-def render_bid_form(item: dict):
-    st.header(item.get("title"))
-    render_image(item.get("image_url"))
-    st.write(item.get("description", ""))
-    st.write(f"Current bid: {item.get('current_bid')}")
-    st.write(f"Highest bidder: {item.get('highest_bidder', 'None')}")
-    bid_amt = st.number_input(
-        "Bid amount",
-        min_value=float(item.get("current_bid", 0)),
-        step=0.01,
-        key=f"bid_amount_input_{item['id']}"
-    )
-    if st.button("Place Bid", key=f"place_bid_btn_{item['id']}"):
-        if not ensure_supabase_session():
-            return
-        if bid_amt > float(item.get("current_bid", 0)):
-            supabase.table("items").update({
-                "current_bid": bid_amt,
-                "highest_bidder": st.session_state["user"].id,
-            }).eq("id", item["id"]).execute()
-            st.success("Bid placed")
-            st.experimental_rerun()
-        else:
-            st.error("Bid must be greater than current bid")
 
 
 def marketplace_tab():
@@ -178,24 +163,12 @@ def marketplace_tab():
     if supabase is None:
         st.error("Supabase not configured")
         return
-    selected_item_id = st.session_state.get("selected_item_id")
-    if selected_item_id:
-        res = supabase.table("items").select("*").eq("id", selected_item_id).single().execute()
-        item = res.data
-        if item:
-            render_bid_form(item)
-            if st.button("Back to Marketplace", key="back_to_marketplace"):
-                st.session_state["selected_item_id"] = None
-                st.experimental_rerun()
-        else:
-            st.error("Item not found")
-        return
     res = supabase.table("items").select("*").order("created_at", desc=True).execute()
     items = res.data or []
     if not items:
         st.info("No items listed yet.")
     for idx, item in enumerate(items):
-        render_item_card(idx, item, prefix="marketplace")
+        render_item_card(idx, item, show_delete=False)
 
 
 
@@ -264,7 +237,7 @@ def user_listings_tab():
     if not items:
         st.info("You have not created any listings.")
     for idx, item in enumerate(items):
-        render_item_card(idx, item, prefix="user")
+        render_item_card(idx, item, show_delete=True)
 
 
 
