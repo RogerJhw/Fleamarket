@@ -126,7 +126,7 @@ else:
         st.success("Email verified")
 
 def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: str = ""):
-    cols = st.columns([1, 1,])
+    cols = st.columns([1, 1, 2])
     with cols[0]:
         render_image(item.get("image_url"))
         bid_key = f"{prefix}_bid_input_{item['id']}"
