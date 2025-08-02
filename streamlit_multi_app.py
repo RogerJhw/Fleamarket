@@ -140,7 +140,7 @@ def render_item_card(idx: int, item: dict):
         st.subheader(item.get("title"))
         st.write(item.get("description", ""))
         st.write(f"Current bid: {item.get('current_bid')}")
-        if st.button("View", key=f"bid_{idx}"):
+        if st.button("View", key=f"bid_{item['id']}"):
             st.session_state["selected_item_id"] = item["id"]
             st.experimental_set_query_params(tab="Bid")
             st.experimental_rerun()
