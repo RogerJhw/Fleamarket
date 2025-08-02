@@ -126,10 +126,9 @@ else:
         st.success("Email verified")
 
 def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: str = ""):
-    cols = st.columns([1, 1, 2])
+    cols = st.columns([1, 1,])
     with cols[0]:
         render_image(item.get("image_url"))
-    with cols[1]:
         bid_key = f"{prefix}_bid_input_{item['id']}"
         place_key = f"{prefix}_place_bid_{item['id']}"
         bid_amt = st.number_input(
@@ -150,7 +149,7 @@ def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: st
                 st.experimental_rerun()
             else:
                 st.error("Bid must be greater than current bid")
-    with cols[2]:
+    with cols[1]:
         st.markdown(f"### {item.get('title')}")
         st.write(item.get("description", ""))
         st.write(f"Current bid: ${item.get('current_bid', 0):.2f}")
