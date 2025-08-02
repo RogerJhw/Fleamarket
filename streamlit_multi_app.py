@@ -126,21 +126,17 @@ else:
         st.success("Email verified")
 
 def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: str = ""):
-    cols = st.columns([1, 2])
+    cols = st.columns([1, 1, 2])
     with cols[0]:
         render_image(item.get("image_url"))
     with cols[1]:
-        st.markdown(f"### {item.get('title')}")
-        st.write(item.get("description", ""))
-        st.write(f"Current bid: ${item.get('current_bid', 0):.2f}")
-        st.write(f"Highest bidder: {item.get('highest_bidder', 'None')}")
         bid_key = f"{prefix}_bid_input_{item['id']}"
         place_key = f"{prefix}_place_bid_{item['id']}"
         bid_amt = st.number_input(
             "Bid amount",
             min_value=float(item.get("current_bid", 0)),
             step=0.01,
-            key=bid_key
+            key=bid_key,
         )
         if st.button("Place Bid", key=place_key):
             if not ensure_supabase_session():
@@ -154,6 +150,11 @@ def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: st
                 st.experimental_rerun()
             else:
                 st.error("Bid must be greater than current bid")
+    with cols[2]:
+        st.markdown(f"### {item.get('title')}")
+        st.write(item.get("description", ""))
+        st.write(f"Current bid: ${item.get('current_bid', 0):.2f}")
+        st.write(f"Highest bidder: {item.get('highest_bidder', 'None')}")
         if show_delete:
             if st.button("Delete", key=f"delete_btn_{item['id']}"):
                 supabase.table("items").delete().eq("id", item["id"]).execute()
@@ -243,9 +244,23 @@ def user_listings_tab():
         render_item_card(idx, item, show_delete=True, prefix="user")
 
 
+def my_bids_tab():
+    st.header("My Bids")
+    if supabase is None:
+        st.error("Supabase not configured")
+        return
+    user_id = st.session_state["user"].id
+    res = supabase.table("items").select("*").eq("highest_bidder", user_id).execute()
+    items = res.data or []
+    if not items:
+        st.info("You are not currently the highest bidder on any listings.")
+    for idx, item in enumerate(items):
+        render_item_card(idx, item, show_delete=False, prefix="mybids")
+
+
 
 # Top navigation using tabs
-tab_labels = ["Marketplace", "Connect Wallet", "Your Listings"]
+tab_labels = ["Marketplace", "Connect Wallet", "Your Listings", "My Bids"]
 
 if st.session_state.get("user") is not None:
     st.sidebar.write(f"Logged in as: {st.session_state['user'].email}")
@@ -260,7 +275,7 @@ active_tab = query_params.get("tab", ["Marketplace"])[0]
 if active_tab not in tab_labels:
     active_tab = "Marketplace"
 
-tab_marketplace, tab_wallet, tab_user_listings = st.tabs(tab_labels)
+tab_marketplace, tab_wallet, tab_user_listings, tab_my_bids = st.tabs(tab_labels)
 
 with tab_marketplace:
     marketplace_tab()
@@ -270,3 +285,6 @@ with tab_wallet:
 
 with tab_user_listings:
     user_listings_tab()
+
+with tab_my_bids:
+    my_bids_tab()
