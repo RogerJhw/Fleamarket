@@ -38,18 +38,30 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=No+Image"
 logging.basicConfig(level=logging.INFO)
 
 
+# def render_image(url: str) -> None:
+#     """Safely display an image, falling back to a placeholder."""
+#     if not url:
+#         st.image(PLACEHOLDER_IMAGE, use_column_width=True)
+#         st.caption("No image available")
+#         return
+#     try:
+#         st.image(url, use_column_width=True)
+#     except Exception as exc:
+#         logging.warning("Failed to load image %s: %s", url, exc)
+#         st.image(PLACEHOLDER_IMAGE, use_column_width=True)
+#         st.caption("Image unavailable")
+
 def render_image(url: str) -> None:
-    """Safely display an image, falling back to a placeholder."""
-    if not url:
-        st.image(PLACEHOLDER_IMAGE, use_column_width=True)
-        st.caption("No image available")
-        return
-    try:
-        st.image(url, use_column_width=True)
-    except Exception as exc:
-        logging.warning("Failed to load image %s: %s", url, exc)
-        st.image(PLACEHOLDER_IMAGE, use_column_width=True)
-        st.caption("Image unavailable")
+    """Safely display an image with rounded corners using HTML fallback."""
+    display_url = url if url else PLACEHOLDER_IMAGE
+    html = f"""
+    <div style="text-align: center;">
+        <img src="{display_url}" style="width: 100%; border-radius: 16px;" />
+        <p style="color: gray;">{'No image available' if not url else ''}</p>
+    </div>
+    """
+    st.markdown(html, unsafe_allow_html=True)
+
 
 # Session state initialization
 if "listings" not in st.session_state:
