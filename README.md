@@ -140,4 +140,5 @@ The multi-tab app now supports user authentication and persistent item storage
 via [Supabase](https://supabase.com). Create a `.env` file with your Supabase
 credentials (see `.env.example`). On first launch you will be prompted to sign up
 or sign in. Listed items are stored in the `items` table and are shared across
-sessions.
+sessions. Ensure the `items` table also includes a `highest_bidder` column of type
+`uuid` to record the current winning bidder.

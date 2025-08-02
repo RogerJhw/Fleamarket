@@ -125,7 +125,7 @@ else:
     if getattr(user, "email_confirmed_at", None):
         st.success("Email verified")
 
-def render_item_card(idx: int, item: dict, show_delete: bool = False):
+def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: str = ""):
     cols = st.columns([1, 2])
     with cols[0]:
         render_image(item.get("image_url"))
@@ -134,13 +134,15 @@ def render_item_card(idx: int, item: dict, show_delete: bool = False):
         st.write(item.get("description", ""))
         st.write(f"Current bid: ${item.get('current_bid', 0):.2f}")
         st.write(f"Highest bidder: {item.get('highest_bidder', 'None')}")
+        bid_key = f"{prefix}_bid_input_{item['id']}"
+        place_key = f"{prefix}_place_bid_{item['id']}"
         bid_amt = st.number_input(
             "Bid amount",
             min_value=float(item.get("current_bid", 0)),
             step=0.01,
-            key=f"bid_input_{item['id']}"
+            key=bid_key
         )
-        if st.button("Place Bid", key=f"place_bid_{item['id']}"):
+        if st.button("Place Bid", key=place_key):
             if not ensure_supabase_session():
                 return
             if bid_amt > float(item.get("current_bid", 0)):
@@ -168,7 +170,7 @@ def marketplace_tab():
     if not items:
         st.info("No items listed yet.")
     for idx, item in enumerate(items):
-        render_item_card(idx, item, show_delete=False)
+        render_item_card(idx, item, show_delete=False, prefix="market")
 
 
 
@@ -205,6 +207,7 @@ def create_listing_form():
             "description": description,
             "image_url": image_url,
             "current_bid": price,
+            "highest_bidder": None,
         }
         supabase.table("items").insert(data).execute()
         st.success("Item listed")
@@ -237,7 +240,7 @@ def user_listings_tab():
     if not items:
         st.info("You have not created any listings.")
     for idx, item in enumerate(items):
-        render_item_card(idx, item, show_delete=True)
+        render_item_card(idx, item, show_delete=True, prefix="user")
 
 
 
