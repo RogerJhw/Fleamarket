@@ -1,6 +1,7 @@
 import os
 from datetime import datetime
 import logging
+import json
 
 from supabase import create_client, Client
 
@@ -38,27 +39,35 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=No+Image"
 logging.basicConfig(level=logging.INFO)
 
 
-# def render_image(url: str) -> None:
-#     """Safely display an image, falling back to a placeholder."""
-#     if not url:
-#         st.image(PLACEHOLDER_IMAGE, use_column_width=True)
-#         st.caption("No image available")
-#         return
-#     try:
-#         st.image(url, use_column_width=True)
-#     except Exception as exc:
-#         logging.warning("Failed to load image %s: %s", url, exc)
-#         st.image(PLACEHOLDER_IMAGE, use_column_width=True)
-#         st.caption("Image unavailable")
+def render_images(image_urls_json: str) -> None:
+    import json
 
-def render_image(url: str) -> None:
-    display_url = url if url else PLACEHOLDER_IMAGE
-    html = f"""
-    <div style="width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 16px;">
-        <img src="{display_url}" style="width: 100%; height: 100%; object-fit: cover;" />
+    try:
+        urls = json.loads(image_urls_json)
+    except Exception:
+        urls = [image_urls_json] if image_urls_json else [PLACEHOLDER_IMAGE]
+
+    if not urls:
+        urls = [PLACEHOLDER_IMAGE]
+
+    image_html = "".join([
+        f'<div class="swiper-slide"><img src="{url}" style="width:100%; height:100%; object-fit:cover; border-radius: 8px;" /></div>'
+        for url in urls
+    ])
+    swiper_container = f"""
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <div class="swiper mySwiper" style="width:100%; aspect-ratio: 4 / 3;">
+      <div class="swiper-wrapper">{image_html}</div>
+      <div class="swiper-pagination"></div>
     </div>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+      const swiper = new Swiper('.mySwiper', {{
+        pagination: {{ el: '.swiper-pagination', clickable: true }},
+      }});
+    </script>
     """
-    st.markdown(html, unsafe_allow_html=True)
+    st.components.v1.html(swiper_container, height=300)
 
 
 # Session state initialization
@@ -127,7 +136,7 @@ else:
 def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: str = ""):
     cols = st.columns([1, 1, 2])
     with cols[0]:
-        render_image(item.get("image_url"))
+        render_images(item.get("image_urls"))
         bid_key = f"{prefix}_bid_input_{item['id']}"
         place_key = f"{prefix}_place_bid_{item['id']}"
         bid_amt = st.number_input(
@@ -184,19 +193,32 @@ def create_listing_form():
     title = st.text_input("Item title")
     description = st.text_area("Description")
     price = st.number_input("Starting bid", min_value=0.00, step=0.01)
-    uploaded_file = st.file_uploader("Image", type=["png", "jpg", "jpeg"])
+    uploaded_files = st.file_uploader(
+        "Images (up to 3)", type=["png", "jpg", "jpeg"], accept_multiple_files=True
+    )
+
+    # Limit uploads to 3
+    if uploaded_files and len(uploaded_files) > 3:
+        st.error("You can only upload up to 3 images.")
+        return
+
+    # Show image preview
+    if uploaded_files:
+        st.write("Preview:")
+        for f in uploaded_files:
+            st.image(f, use_column_width=True)
 
     if st.button("List Item", key="list_item_btn"):
-        image_url = PLACEHOLDER_IMAGE  # default
-        if uploaded_file:
+        image_urls = []
+        for uploaded_file in uploaded_files or []:
             try:
                 image_bytes = uploaded_file.read()
                 file_name = f"{st.session_state['user'].id}_{int(time.time())}_{uploaded_file.name}"
-                # Upload image to Supabase Storage
                 supabase.storage.from_("images").upload(file_name, image_bytes)
-
-                # Construct the public URL manually
-                image_url = f"https://csojmedglbaofffdxasx.supabase.co/storage/v1/object/public/images/{file_name}"
+                public_url = (
+                    f"https://csojmedglbaofffdxasx.supabase.co/storage/v1/object/public/images/{file_name}"
+                )
+                image_urls.append(public_url)
             except Exception as exc:
                 logging.error("Image upload failed: %s", exc)
 
@@ -204,7 +226,7 @@ def create_listing_form():
             "user_id": st.session_state["user"].id,
             "title": title,
             "description": description,
-            "image_url": image_url,
+            "image_urls": json.dumps(image_urls),
             "current_bid": price,
             "highest_bidder": None,
         }
