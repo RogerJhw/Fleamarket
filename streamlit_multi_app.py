@@ -52,12 +52,10 @@ logging.basicConfig(level=logging.INFO)
 #         st.caption("Image unavailable")
 
 def render_image(url: str) -> None:
-    """Safely display an image with rounded corners using HTML fallback."""
     display_url = url if url else PLACEHOLDER_IMAGE
     html = f"""
-    <div style="text-align: center;">
-        <img src="{display_url}" style="width: 100%; border-radius: 16px;" />
-        <p style="color: gray;">{'No image available' if not url else ''}</p>
+    <div style="width: 100%; aspect-ratio: 4 / 3; overflow: hidden; border-radius: 16px;">
+        <img src="{display_url}" style="width: 100%; height: 100%; object-fit: cover;" />
     </div>
     """
     st.markdown(html, unsafe_allow_html=True)
@@ -122,8 +120,9 @@ if st.session_state.get("user") is None:
     st.stop()
 else:
     user = st.session_state["user"]
-    if getattr(user, "email_confirmed_at", None):
-        st.success("Email verified")
+    if not getattr(user, "email_confirmed_at", None):
+        st.warning("Please verify your email to continue using the app.")
+        st.stop()
 
 def render_item_card(idx: int, item: dict, show_delete: bool = False, prefix: str = ""):
     cols = st.columns([1, 1, 2])
@@ -219,12 +218,12 @@ def user_listings_tab():
     if "show_create_form" not in st.session_state:
         st.session_state["show_create_form"] = False
     st.header("Your Listings")
-    if st.session_state.get("show_create_form"):
+    if st.button("Create New Listing", key="create_listing_btn"):
+        st.session_state["show_create_form"] = True
+
+    if st.session_state["show_create_form"]:
         create_listing_form()
         st.divider()
-    else:
-        if st.button("Create New Listing", key="create_listing_btn"):
-            st.session_state["show_create_form"] = True
 
     if supabase is None:
         st.error("Supabase not configured")
