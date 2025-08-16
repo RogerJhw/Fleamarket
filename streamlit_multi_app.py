@@ -56,15 +56,13 @@ def render_images(image_urls_json: str) -> None:
     ])
     swiper_container = f"""
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <div class="swiper mySwiper" style="width:100%; aspect-ratio: 4 / 3;">
+    <div class="swiper mySwiper" style="width:100%; height:100%;">  <!-- was aspect-ratio -->
       <div class="swiper-wrapper">{image_html}</div>
       <div class="swiper-pagination"></div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     <script>
-      const swiper = new Swiper('.mySwiper', {{
-        pagination: {{ el: '.swiper-pagination', clickable: true }},
-      }});
+      const swiper = new Swiper('.mySwiper', { pagination: { el: '.swiper-pagination', clickable: true } });
     </script>
     """
     st.components.v1.html(swiper_container, height=300)
