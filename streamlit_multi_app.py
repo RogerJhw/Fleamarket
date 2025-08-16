@@ -39,33 +39,24 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=No+Image"
 logging.basicConfig(level=logging.INFO)
 
 
-def render_images(image_urls_in, *, aspect_ratio: str = "1 / 1", height_px: int = 340, radius_px: int = 16):
+def render_images(image_urls_in, *, height_px: int = 340, radius_px: int = 16):
     import json
 
-    # --- Coerce input into a list of URL strings ---
     def coerce_urls(v):
-        if v is None:
-            return []
-        if isinstance(v, list):
-            return [str(u).strip() for u in v if str(u).strip()]
+        if not v: return []
+        if isinstance(v, list): return [str(u).strip() for u in v if str(u).strip()]
         if isinstance(v, str):
             s = v.strip()
             if s.startswith("[") and s.endswith("]"):
                 try:
                     arr = json.loads(s)
-                    if isinstance(arr, list):
-                        return [str(u).strip() for u in arr if str(u).strip()]
-                except Exception:
-                    pass
-            # maybe comma-separated single-line
-            if "," in s:
-                return [p.strip() for p in s.split(",") if p.strip()]
-            return [s]  # single URL string
+                    if isinstance(arr, list): return [str(u).strip() for u in arr if str(u).strip()]
+                except Exception: pass
+            if "," in s: return [p.strip() for p in s.split(",") if p.strip()]
+            return [s]
         return []
 
-    urls = coerce_urls(image_urls_in)
-    if not urls:
-        urls = [PLACEHOLDER_IMAGE]
+    urls = coerce_urls(image_urls_in) or [PLACEHOLDER_IMAGE]
 
     slides = "\n".join(
         f'<div class="swiper-slide"><img src="{u}" alt="listing image"></div>'
@@ -78,10 +69,13 @@ def render_images(image_urls_in, *, aspect_ratio: str = "1 / 1", height_px: int 
   .mySwiper {{
     width: 100%;
     height: 100%;
+    border-radius: {radius_px}px;     /* round the VIEWPORT */
+    overflow: hidden;                 /* hide any peeking slide */
     position: relative;
   }}
-  .mySwiper .swiper-wrapper,
+  .mySwiper .swiper-wrapper {{ height: 100%; }}
   .mySwiper .swiper-slide {{
+    width: 100% !important;           /* force 1 slide per view */
     height: 100%;
     display: flex;
     align-items: center;
@@ -90,9 +84,7 @@ def render_images(image_urls_in, *, aspect_ratio: str = "1 / 1", height_px: int 
   .mySwiper img {{
     width: 100%;
     height: 100%;
-    aspect-ratio: {aspect_ratio};
-    object-fit: cover;
-    border-radius: {radius_px}px;
+    object-fit: cover;                /* fill without distortion */
     display: block;
   }}
   .mySwiper .swiper-pagination-bullets {{ bottom: 10px !important; }}
@@ -113,14 +105,17 @@ def render_images(image_urls_in, *, aspect_ratio: str = "1 / 1", height_px: int 
 <script>
   const swiper = new Swiper('.mySwiper', {{
     slidesPerView: 1,
+    spaceBetween: 0,
+    centeredSlides: false,            // prevent partial slide
+    loop: false,
+    watchOverflow: true,
     pagination: {{ el: '.swiper-pagination', clickable: true }},
     navigation: {{ nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }},
-    keyboard: {{ enabled: true }}
   }});
 </script>
 """
+    # Height of the square viewport; parent column controls width.
     st.components.v1.html(html, height=height_px, scrolling=False)
-
 
 # Session state initialization
 if "listings" not in st.session_state:
