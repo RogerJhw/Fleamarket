@@ -39,24 +39,37 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=No+Image"
 logging.basicConfig(level=logging.INFO)
 
 
-def render_images(image_urls: list[str], *, aspect_ratio: str = "1 / 1", height_px: int = 340, radius_px: int = 18):
-    """
-    Renders a Swiper carousel with:
-      - uniform aspect ratio (default square)
-      - rounded corners on all images
-      - arrows + pagination dots
-    """
-    if not image_urls:
-        return
+def render_images(image_urls_in, *, aspect_ratio: str = "1 / 1", height_px: int = 340, radius_px: int = 16):
+    import json
 
-    # Build slides
+    # --- Coerce input into a list of URL strings ---
+    def coerce_urls(v):
+        if v is None:
+            return []
+        if isinstance(v, list):
+            return [str(u).strip() for u in v if str(u).strip()]
+        if isinstance(v, str):
+            s = v.strip()
+            if s.startswith("[") and s.endswith("]"):
+                try:
+                    arr = json.loads(s)
+                    if isinstance(arr, list):
+                        return [str(u).strip() for u in arr if str(u).strip()]
+                except Exception:
+                    pass
+            # maybe comma-separated single-line
+            if "," in s:
+                return [p.strip() for p in s.split(",") if p.strip()]
+            return [s]  # single URL string
+        return []
+
+    urls = coerce_urls(image_urls_in)
+    if not urls:
+        urls = [PLACEHOLDER_IMAGE]
+
     slides = "\n".join(
-        f"""
-        <div class="swiper-slide">
-          <img src="{u}" alt="listing image"/>
-        </div>
-        """
-        for u in image_urls
+        f'<div class="swiper-slide"><img src="{u}" alt="listing image"></div>'
+        for u in urls
     )
 
     html = f"""
@@ -67,11 +80,9 @@ def render_images(image_urls: list[str], *, aspect_ratio: str = "1 / 1", height_
     height: 100%;
     position: relative;
   }}
-  .mySwiper .swiper-wrapper {{
-    /* Ensures the track uses the full height of the iframe */
-    height: 100%;
-  }}
+  .mySwiper .swiper-wrapper,
   .mySwiper .swiper-slide {{
+    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -79,30 +90,20 @@ def render_images(image_urls: list[str], *, aspect_ratio: str = "1 / 1", height_
   .mySwiper img {{
     width: 100%;
     height: 100%;
-    /* Crop to the same shape across all images */
     aspect-ratio: {aspect_ratio};
     object-fit: cover;
     border-radius: {radius_px}px;
     display: block;
   }}
-
-  /* Make dots/arrows visible and nicely placed */
-  .mySwiper .swiper-pagination-bullets {{
-    bottom: 10px !important;
-  }}
+  .mySwiper .swiper-pagination-bullets {{ bottom: 10px !important; }}
   .mySwiper .swiper-button-prev,
-  .mySwiper .swiper-button-next {{
-    /* Inherit theme color; adjust if needed */
-    filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
-  }}
+  .mySwiper .swiper-button-next {{ filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }}
 </style>
 
 <div class="swiper mySwiper">
   <div class="swiper-wrapper">
     {slides}
   </div>
-
-  <!-- Controls -->
   <div class="swiper-button-prev"></div>
   <div class="swiper-button-next"></div>
   <div class="swiper-pagination"></div>
@@ -111,19 +112,14 @@ def render_images(image_urls: list[str], *, aspect_ratio: str = "1 / 1", height_
 <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
 <script>
   const swiper = new Swiper('.mySwiper', {{
-    loop: false,
     slidesPerView: 1,
-    centeredSlides: true,
     pagination: {{ el: '.swiper-pagination', clickable: true }},
     navigation: {{ nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }},
     keyboard: {{ enabled: true }}
   }});
 </script>
 """
-    # Match iframe height to the CSS we set above
     st.components.v1.html(html, height=height_px, scrolling=False)
-
-
 
 
 # Session state initialization
