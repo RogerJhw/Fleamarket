@@ -39,35 +39,90 @@ PLACEHOLDER_IMAGE = "https://via.placeholder.com/200?text=No+Image"
 logging.basicConfig(level=logging.INFO)
 
 
-def render_images(image_urls_json: str) -> None:
-    import json
-
-    try:
-        urls = json.loads(image_urls_json)
-    except Exception:
-        urls = [image_urls_json] if image_urls_json else [PLACEHOLDER_IMAGE]
-
-    if not urls:
-        urls = [PLACEHOLDER_IMAGE]
-
-    image_html = "".join([
-        f'<div class="swiper-slide"><img src="{url}" style="width:100%; height:100%; object-fit:cover; border-radius: 8px;" /></div>'
-        for url in urls
-    ])
-    swiper_container = f"""
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-    <div class="swiper mySwiper" style="width:100%; height:100%;">
-      <div class="swiper-wrapper">{image_html}</div>
-      <div class="swiper-pagination"></div>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-    <script>
-      const swiper = new Swiper('.mySwiper', {{
-        pagination: {{ el: '.swiper-pagination', clickable: true }}
-      }});
-    </script>
+def render_images(image_urls: list[str], *, aspect_ratio: str = "1 / 1", height_px: int = 340, radius_px: int = 18):
     """
-    st.components.v1.html(swiper_container, height=300)
+    Renders a Swiper carousel with:
+      - uniform aspect ratio (default square)
+      - rounded corners on all images
+      - arrows + pagination dots
+    """
+    if not image_urls:
+        return
+
+    # Build slides
+    slides = "\n".join(
+        f"""
+        <div class="swiper-slide">
+          <img src="{u}" alt="listing image"/>
+        </div>
+        """
+        for u in image_urls
+    )
+
+    html = f"""
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+<style>
+  .mySwiper {{
+    width: 100%;
+    height: 100%;
+    position: relative;
+  }}
+  .mySwiper .swiper-wrapper {{
+    /* Ensures the track uses the full height of the iframe */
+    height: 100%;
+  }}
+  .mySwiper .swiper-slide {{
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }}
+  .mySwiper img {{
+    width: 100%;
+    height: 100%;
+    /* Crop to the same shape across all images */
+    aspect-ratio: {aspect_ratio};
+    object-fit: cover;
+    border-radius: {radius_px}px;
+    display: block;
+  }}
+
+  /* Make dots/arrows visible and nicely placed */
+  .mySwiper .swiper-pagination-bullets {{
+    bottom: 10px !important;
+  }}
+  .mySwiper .swiper-button-prev,
+  .mySwiper .swiper-button-next {{
+    /* Inherit theme color; adjust if needed */
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,.35));
+  }}
+</style>
+
+<div class="swiper mySwiper">
+  <div class="swiper-wrapper">
+    {slides}
+  </div>
+
+  <!-- Controls -->
+  <div class="swiper-button-prev"></div>
+  <div class="swiper-button-next"></div>
+  <div class="swiper-pagination"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+<script>
+  const swiper = new Swiper('.mySwiper', {{
+    loop: false,
+    slidesPerView: 1,
+    centeredSlides: true,
+    pagination: {{ el: '.swiper-pagination', clickable: true }},
+    navigation: {{ nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }},
+    keyboard: {{ enabled: true }}
+  }});
+</script>
+"""
+    # Match iframe height to the CSS we set above
+    st.components.v1.html(html, height=height_px, scrolling=False)
+
 
 
 
