@@ -63,59 +63,74 @@ def render_images(image_urls_in, *, height_px: int = 340, radius_px: int = 16):
         for u in urls
     )
 
+    
     html = f"""
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
-<style>
-  .mySwiper {{
-    width: 100%;
-    height: 100%;
-    border-radius: {radius_px}px;     /* round the VIEWPORT */
-    overflow: hidden;                 /* hide any peeking slide */
-    position: relative;
-  }}
-  .mySwiper .swiper-wrapper {{ height: 100%; }}
-  .mySwiper .swiper-slide {{
-    width: 100% !important;           /* force 1 slide per view */
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }}
-  .mySwiper img {{
-    width: 100%;
-    height: 100%;
-    object-fit: cover;                /* fill without distortion */
-    display: block;
-  }}
-  .mySwiper .swiper-pagination-bullets {{ bottom: 10px !important; }}
-  .mySwiper .swiper-button-prev,
-  .mySwiper .swiper-button-next {{ filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }}
-</style>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    
+    <style>
+      /* Square viewport with rounded corners */
+      .ratio-box {{
+        aspect-ratio: 1 / 1;            /* change to 4 / 3 if you prefer */
+        width: 100%;
+        max-height: {height_px}px;       /* ensures we don't exceed iframe height */
+        border-radius: {radius_px}px;
+        overflow: hidden;
+        position: relative;
+      }}
+      .ratio-box .mySwiper {{
+        position: absolute;
+        inset: 0;                        /* fill the ratio box */
+        width: 100%;
+        height: 100%;
+      }}
+    
+      .mySwiper .swiper-wrapper {{ height: 100%; }}
+      .mySwiper .swiper-slide {{
+        width: 100% !important;
+        height: 100%;
+        display: flex; align-items: center; justify-content: center;
+      }}
+      .mySwiper img {{
+        width: 100%;
+        height: 100%;
+        object-fit: cover;               /* uniform shape; no letterboxing */
+        object-position: center;         /* tweak if faces are cropped */
+        display: block;
+      }}
+    
+      .mySwiper .swiper-pagination-bullets {{ bottom: 10px !important; }}
+      .mySwiper .swiper-button-prev,
+      .mySwiper .swiper-button-next {{ filter: drop-shadow(0 1px 2px rgba(0,0,0,.35)); }}
+    </style>
+    
+    <div class="ratio-box">
+      <div class="swiper mySwiper">
+        <div class="swiper-wrapper">
+          {slides}
+        </div>
+        <div class="swiper-button-prev"></div>
+        <div class="swiper-button-next"></div>
+        <div class="swiper-pagination"></div>
+      </div>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script>
+      const swiper = new Swiper('.mySwiper', {{
+        slidesPerView: 1,
+        centeredSlides: false,
+        spaceBetween: 0,
+        loop: false,
+        watchOverflow: true,
+        pagination: {{ el: '.swiper-pagination', clickable: true }},
+        navigation: {{ nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }}
+      }});
+    </script>
+    """
+    st.components.v1.html(html, height=height_px + 28, scrolling=False)  # +28 for dots
 
-<div class="swiper mySwiper">
-  <div class="swiper-wrapper">
-    {slides}
-  </div>
-  <div class="swiper-button-prev"></div>
-  <div class="swiper-button-next"></div>
-  <div class="swiper-pagination"></div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
-<script>
-  const swiper = new Swiper('.mySwiper', {{
-    slidesPerView: 1,
-    spaceBetween: 0,
-    centeredSlides: false,            // prevent partial slide
-    loop: false,
-    watchOverflow: true,
-    pagination: {{ el: '.swiper-pagination', clickable: true }},
-    navigation: {{ nextEl: '.swiper-button-next', prevEl: '.swiper-button-prev' }},
-  }});
-</script>
-"""
     # Height of the square viewport; parent column controls width.
-    st.components.v1.html(html, height=height_px, scrolling=False)
+    
 
 # Session state initialization
 if "listings" not in st.session_state:
