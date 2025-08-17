@@ -127,7 +127,7 @@ def render_images(image_urls_in, *, height_px: int = 340, radius_px: int = 16):
       }});
     </script>
     """
-    st.components.v1.html(html, height=height_px -  16, scrolling=False)  # +28 for dots
+    st.components.v1.html(html, height=height_px -  32, scrolling=False)  # +28 for dots
 
     # Height of the square viewport; parent column controls width.
     
